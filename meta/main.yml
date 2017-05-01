@@ -1,0 +1,15 @@
+---
+galaxy_info:
+  author: philporada@gmail.com
+  description: ansible-role-kibana
+  company: MI Tall Guy
+  min_ansible_version: 2.2
+  license: GPLv3
+  platforms:
+    - name: EL
+      versions:
+        - 7
+
+dependencies:
+  - {role: pgporada.repo-elastic}
+...

@@ -1,0 +1,27 @@
+---
+kibana_user: kibana
+kibana_group: kibana
+
+kibana_package_state: present
+
+kibana_htpasswd_file_path: "/opt/kibana/htpasswd.kibana"
+kibana_htpasswd:
+  - user: pgporada
+    pass: test-kitchen
+
+kibana_use_elasticsearch_ssl: false
+kibana_elasticsearch_ssl_verify: false
+kibana_elasticsearch_ssl_ca_path:
+kibana_elasticsearch_ssl_crt_path:
+kibana_elasticsearch_ssl_key_path:
+
+kibana_logfile_dir: /var/log/kibana
+
+kibana_listen_addr: 127.0.0.1
+kibana_listen_port: 5601
+
+# We don't need to see the access logs, just if it's working.
+kibana_logging_quiet: true
+
+kibana_elasticsearch_url: "http://127.0.0.1:9200"
+...

@@ -1,0 +1,9 @@
+---
+- src: git@github.com:pgporada/ansible-role-repo-elastic.git
+  scm: git
+  name: pgporada.repo-elastic
+
+- src: git@github.com:pgporada/ansible-role-httpd.git
+  scm: git
+  name: pgporada.httpd
+...

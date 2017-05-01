@@ -1,0 +1,50 @@
+---
+- hosts: test-kitchen
+
+  vars:
+    # pgporada.kibana
+    kibana_package_state: latest
+    kibana_elasticsearch_url: "http://192.168.33.10:9200"
+    kibana_htpasswd_file_path: "/opt/kibana/htpasswd.kibana"
+
+    # pgporada.httpd
+    httpd_is_behind_loadbalancer: false
+    httpd_vhosts_enabled:
+      - url: kibana.whatever.test
+        aliases: []
+        serveradmin: ops@pgporada.com
+        errorlog: "/var/log/httpd/error_log"
+        accesslog: "/var/log/httpd/access_log"
+        directory: "/var/www/app"
+        docrootdir: public_html
+        extra_parameters_main: |
+          RewriteEngine on
+        extra_parameters_include: |
+          #
+          <Location "/">
+              Require ip 216.109.198.154/32
+              Require ip 192.168.33.1/24
+              AuthType Basic
+              AuthName "Restricted Kibana"
+              AuthBasicProvider file
+              AuthUserFile "{{ kibana_htpasswd_file_path }}"
+              Require valid-user
+          </Location>
+          #
+          # CVE-2016-5385, CVE-2016-5387
+          RequestHeader unset Proxy early
+          #
+          # Hide git related stuff
+          RewriteRule ^(.*/)?\.git+ - [R=404,L]
+          RewriteRule ^(.*/)?\.gitignore+ - [R=404,L]
+          #
+          ProxyRequests Off
+          ProxyPreserveHost On
+          ProxyPass        / http://{{ kibana_listen_addr }}:{{ kibana_listen_port }}/
+          ProxyPassReverse / http://{{ kibana_listen_addr }}:{{ kibana_listen_port }}/
+
+  roles:
+    - pgporada.httpd
+    - pgporada.repo-elastic
+    - ansible-role-kibana
+...

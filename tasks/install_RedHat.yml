@@ -1,0 +1,144 @@
+---
+- name: Install role dependencies
+  become: true
+  become_method: sudo
+  package:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - unzip
+    - httpd-tools
+    - python-passlib
+    - python-pip
+    - bcrypt
+    - libselinux-python
+    - policycoreutils-python
+  notify:
+    - Restart kibana
+
+- name: Install pip module(s)
+  pip:
+    name: bcrypt
+    state: present
+
+- name: Install Kibana RPM
+  become: true
+  become_method: sudo
+  package:
+    name: kibana
+    state: "{{ kibana_package_state }}"
+  notify:
+    - Restart kibana
+
+- name: SELinux booleans
+  become: true
+  become_method: sudo
+  seboolean:
+    name: "{{ item }}"
+    state: "yes"
+    persistent: "yes"
+  with_items:
+    - httpd_can_network_connect
+    - httpd_builtin_scripting
+  when: ansible_selinux is defined and ansible_selinux.status == "enabled"
+
+- name: SELinux port re-map
+  become: true
+  become_method: sudo
+  seport:
+    ports: "{{ kibana_listen_port }}"
+    proto: tcp
+    setype: http_port_t
+    state: present
+  when: ansible_selinux is defined and ansible_selinux.status == "enabled"
+
+- name: Ensure kibana log dir exists
+  become: true
+  become_method: sudo
+  file:
+    path: "{{ kibana_logfile_dir }}"
+    owner: "{{ kibana_user }}"
+    group: "{{ kibana_group }}"
+    mode: 0750
+    state: directory
+    seuser: system_u
+    serole: object_r
+    setype: var_log_t
+    selevel: s0
+  notify:
+    - Restart kibana
+
+- name: Touch the log file
+  become: true
+  become_method: sudo
+  file:
+    state: touch
+    path: "{{ kibana_logfile_dir }}/kibana.log"
+    owner: "{{ kibana_user }}"
+    group: "{{ kibana_group }}"
+    mode: 0640
+    seuser: system_u
+    serole: object_r
+    setype: var_log_t
+    selevel: s0
+  changed_when: false
+
+- name: Add logrotate script
+  become: true
+  become_method: sudo
+  template:
+    src: etc/logrotate.d/kibana.j2
+    dest: /etc/logrotate.d/kibana
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Throw warning message if using the default htpasswd
+  vars:
+    default_htpasswd: |
+      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      WARNING WARNING WARNING WARNING WARNING WA
+      You are using the default htpasswd pass!!!
+      WARNING WARNING WARNING WARNING WARNING WA
+      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  debug:
+    msg: "{{ default_htpasswd.split('\n') }}"
+  no_log: true
+  when: "item.pass == 'test-kitchen'"
+  with_items: "{{ kibana_htpasswd }}"
+
+- name: Create kibana admin user
+  become: true
+  become_method: sudo
+  htpasswd:
+    state: present
+    path: "{{ kibana_htpasswd_file_path }}"
+    name: "{{ item.user }}"
+    password: "{{ item.pass }}"
+    crypt_scheme: bcrypt
+    owner: root
+    group: root
+    mode: 0644
+  no_log: true
+  with_items: "{{ kibana_htpasswd }}"
+
+- name: Copy in the kibana template
+  become: true
+  become_method: sudo
+  template:
+    src: etc/kibana/kibana.yml.j2
+    dest: /etc/kibana/kibana.yml
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+    - Restart kibana
+
+- name: Ensure kibana is started
+  become: true
+  become_method: sudo
+  service:
+    name: kibana
+    state: started
+    enabled: true
+...

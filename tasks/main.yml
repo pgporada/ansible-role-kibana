@@ -1,0 +1,5 @@
+---
+- name: Include OS-specific tasks (RHEL versions)
+  include: "install_{{ ansible_os_family }}.yml"
+  when: ansible_os_family == "RedHat"
+...

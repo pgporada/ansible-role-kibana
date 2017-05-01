@@ -1,0 +1,10 @@
+"{{ kibana_logfile_dir}}/kibana.log" {
+    daily
+    rotate 7
+    create 640 {{ kibana_user }} {{ kibana_group }}
+    missingok
+    delaycompress
+    compress
+    notifempty
+    copytruncate
+}
